@@ -56,55 +56,41 @@ pub fn day4_part1_optimized(dataset: &[u8]) -> i64 {
     // - For newline none of the bits are set
     const TYPE_MASK: u8 = 0b00110000;
     const DIGIT_MASK: u8 = 0b00110000;
-    const NEWLINE_MASK: u8 = 0b000000;
 
-    let mut nums = 0_u64;
-    let mut nums_i = 0;
+    let mut nums = [0_u16; 4];
+    let mut nums_i = 3;
 
     let mut sum = 0;
-    let mut curr = 0_u64;
 
     let mut i = 0;
     while i < dataset.len() {
-        let char_type = dataset[i] & TYPE_MASK;
+        let c: &[u8; 2] = unsafe {
+            dataset
+                .get_unchecked(i..i + 2)
+                .try_into()
+                .unwrap_unchecked()
+        };
 
-        if char_type == DIGIT_MASK {
-            curr = curr << 8 | dataset[i] as u64;
-        } else if char_type == NEWLINE_MASK {
-            let a = nums & 0xffff;
-            let b = (nums >> 16) & 0xffff;
-            let c = (nums >> 32) & 0xffff;
-            let d = curr;
+        if c[1] & TYPE_MASK == DIGIT_MASK {
+            *unsafe { nums.get_unchecked_mut(nums_i) } = u16::from_be_bytes(c.clone());
+            i += 2;
+        } else {
+            *unsafe { nums.get_unchecked_mut(nums_i) } = c[0] as u16;
+            i += 1;
+        }
 
+        if nums_i == 0 {
+            let [a, b, c, d] = nums;
             let is_subset = a >= c && b <= d || c >= a && d <= b;
-
             if is_subset {
                 sum += 1;
             }
 
-            nums = 0;
-            curr = 0;
-            nums_i = 0;
+            nums_i = 3;
         } else {
-            nums |= (curr << (nums_i * 16)) as u64;
-            curr = 0;
-            nums_i += 1;
+            nums_i -= 1;
         }
-
         i += 1;
-    }
-
-    if dataset.last() != Some(&b'\n') {
-        let a = nums & 0xffff;
-        let b = (nums >> 16) & 0xffff;
-        let c = (nums >> 32) & 0xffff;
-        let d = curr;
-
-        let is_subset = a >= c && b <= d || c >= a && d <= b;
-
-        if is_subset {
-            sum += 1;
-        }
     }
 
     sum
