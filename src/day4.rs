@@ -13,7 +13,10 @@ fn bstoi_2(num: &[u8]) -> i64 {
 }
 
 #[inline(always)]
-fn parse_into_segments(dataset: &'_ [u8]) -> impl Iterator<Item = [i64; 4]> + '_ {
+fn parse_into_segments(mut dataset: &'_ [u8]) -> impl Iterator<Item = [i64; 4]> + '_ {
+    if dataset.last() == Some(&b'\n') {
+        dataset = &dataset[..dataset.len() - 1];
+    }
     dataset.split(|&b| b == b'\n').map(|line| {
         let mut nums = [0; 4];
 
@@ -26,13 +29,11 @@ fn parse_into_segments(dataset: &'_ [u8]) -> impl Iterator<Item = [i64; 4]> + '_
 }
 
 #[aoc(day4, part1)]
-pub fn day4_part1(mut dataset: &[u8]) -> i64 {
-    if dataset.last() == Some(&b'\n') {
-        dataset = &dataset[..dataset.len() - 1];
-    }
+pub fn day4_part1(dataset: &[u8]) -> i64 {
     parse_into_segments(dataset)
         .filter(|nums| {
-            nums[0] >= nums[2] && nums[1] <= nums[3] || nums[2] >= nums[0] && nums[3] <= nums[1]
+            let [a, b, c, d] = nums;
+            a >= c && b <= d || c >= a && d <= b
         })
         .count() as i64
 }
@@ -41,10 +42,8 @@ pub fn day4_part1(mut dataset: &[u8]) -> i64 {
 pub fn day4_part2(dataset: &[u8]) -> i64 {
     parse_into_segments(dataset)
         .filter(|nums| {
-            nums[0] >= nums[2] && nums[0] <= nums[3]
-                || nums[1] >= nums[2] && nums[1] <= nums[3]
-                || nums[2] >= nums[0] && nums[2] <= nums[1]
-                || nums[3] >= nums[0] && nums[3] <= nums[1]
+            let [a, b, c, d] = nums;
+            b >= c && d >= a
         })
         .count() as i64
 }
