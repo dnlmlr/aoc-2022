@@ -1,3 +1,5 @@
+use std::mem::transmute;
+
 use aoc_runner_derive::aoc;
 
 /// Parse an ASCII string with either 1 or 2 characters to i64
@@ -47,50 +49,53 @@ pub fn day4_part2(dataset: &[u8]) -> i64 {
         .count() as i64
 }
 
+macro_rules! extract_inc {
+    ($dat:ident, $out:ident, $search:expr) => {
+        if *$dat.add(1) == $search {
+            $out = *$dat as i16;
+            $dat = $dat.add(2);
+        } else {
+            $out = i16::from_be_bytes(*transmute::<*const u8, &[u8; 2]>($dat));
+            $dat = $dat.add(3);
+        }
+    };
+}
+
 #[aoc(day4, part1, single_pass)]
 pub fn day4_part1_optimized(dataset: &[u8]) -> i64 {
-    // The bits that are set in the mask uniquely identifiy if the character is a number,
-    // newline or either '-' / ','.
-    // - For numbers both bits are set
-    // - For '-' and ',' only the first bit is set
-    // - For newline none of the bits are set
-    const TYPE_MASK: u8 = 0b00110000;
-    const DIGIT_MASK: u8 = 0b00110000;
-
-    let mut nums = [0_u16; 4];
-    let mut nums_i = 3;
-
     let mut sum = 0;
 
-    let mut i = 0;
-    while i < dataset.len() {
-        let c: &[u8; 2] = unsafe {
-            dataset
-                .get_unchecked(i..i + 2)
-                .try_into()
-                .unwrap_unchecked()
-        };
+    let dat_end = dataset.as_ptr_range().end;
+    let mut dat = dataset.as_ptr();
 
-        if c[1] & TYPE_MASK == DIGIT_MASK {
-            *unsafe { nums.get_unchecked_mut(nums_i) } = u16::from_be_bytes(c.clone());
-            i += 2;
-        } else {
-            *unsafe { nums.get_unchecked_mut(nums_i) } = c[0] as u16;
-            i += 1;
-        }
+    while dat < dat_end {
+        unsafe {
+            let (a, b, c, d);
 
-        if nums_i == 0 {
-            let [a, b, c, d] = nums;
-            let is_subset = a >= c && b <= d || c >= a && d <= b;
+            extract_inc!(dat, a, b'-');
+            extract_inc!(dat, b, b',');
+            extract_inc!(dat, c, b'-');
+
+            let ac = a - c;
+
+            if ac == 0 {
+                if *dat.add(1) == b'\n' {
+                    dat = dat.add(2);
+                } else {
+                    dat = dat.add(3);
+                }
+                sum += 1;
+                continue;
+            }
+
+            extract_inc!(dat, d, b'\n');
+            let bd = b - d;
+
+            let is_subset = ac.is_negative() != bd.is_negative() || bd == 0;
             if is_subset {
                 sum += 1;
             }
-
-            nums_i = 3;
-        } else {
-            nums_i -= 1;
         }
-        i += 1;
     }
 
     sum
