@@ -50,7 +50,7 @@ pub fn day4_part2(dataset: &[u8]) -> i64 {
 }
 
 macro_rules! extract_inc {
-    ($dat:ident, $out:tt, $search:expr) => {
+    ($dat:ident, $out:expr, $search:expr) => {
         if *$dat.add(1) == $search {
             $out = *$dat as i16;
             $dat = $dat.add(2);
@@ -73,16 +73,45 @@ pub fn day4_part1_optimized(dataset: &[u8]) -> i64 {
 
     while dat < dat_end {
         unsafe {
-            extract_inc!(dat, (lhs[0]), b'-');
-            extract_inc!(dat, (lhs[1]), b',');
-            extract_inc!(dat, (rhs[0]), b'-');
-            extract_inc!(dat, (rhs[1]), b'\n');
+            extract_inc!(dat, lhs[0], b'-');
+            extract_inc!(dat, lhs[1], b',');
+            extract_inc!(dat, rhs[0], b'-');
+            extract_inc!(dat, rhs[1], b'\n');
 
             let diff = lhs - rhs;
 
             let is_subset =
                 diff[0].is_negative() != diff[1].is_negative() || diff[0] == 0 || diff[1] == 0;
             if is_subset {
+                sum += 1;
+            }
+        }
+    }
+
+    sum
+}
+
+#[aoc(day4, part2, single_pass)]
+pub fn day4_part2_optimized(dataset: &[u8]) -> i64 {
+    let mut dat = dataset.as_ptr();
+    let dat_end = dataset.as_ptr_range().end;
+
+    let mut lhs = Simd::from_array([0, 0]);
+    let mut rhs = Simd::from_array([0, 0]);
+
+    let mut sum = 0;
+
+    while dat < dat_end {
+        unsafe {
+            extract_inc!(dat, lhs[0], b'-');
+            extract_inc!(dat, rhs[1], b',');
+            extract_inc!(dat, lhs[1], b'-');
+            extract_inc!(dat, rhs[0], b'\n');
+
+            let diff = lhs - rhs;
+
+            let intersects = diff[0] <= 0 && diff[1] <= 0;
+            if intersects {
                 sum += 1;
             }
         }
