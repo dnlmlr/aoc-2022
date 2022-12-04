@@ -1,4 +1,4 @@
-use std::mem::transmute;
+use std::{mem::transmute, simd::Simd};
 
 use aoc_runner_derive::aoc;
 
@@ -50,7 +50,7 @@ pub fn day4_part2(dataset: &[u8]) -> i64 {
 }
 
 macro_rules! extract_inc {
-    ($dat:ident, $out:ident, $search:expr) => {
+    ($dat:ident, $out:tt, $search:expr) => {
         if *$dat.add(1) == $search {
             $out = *$dat as i16;
             $dat = $dat.add(2);
@@ -63,35 +63,25 @@ macro_rules! extract_inc {
 
 #[aoc(day4, part1, single_pass)]
 pub fn day4_part1_optimized(dataset: &[u8]) -> i64 {
-    let mut sum = 0;
-
-    let dat_end = dataset.as_ptr_range().end;
     let mut dat = dataset.as_ptr();
+    let dat_end = dataset.as_ptr_range().end;
+
+    let mut lhs = Simd::from_array([0, 0]);
+    let mut rhs = Simd::from_array([0, 0]);
+
+    let mut sum = 0;
 
     while dat < dat_end {
         unsafe {
-            let (a, b, c, d);
+            extract_inc!(dat, (lhs[0]), b'-');
+            extract_inc!(dat, (lhs[1]), b',');
+            extract_inc!(dat, (rhs[0]), b'-');
+            extract_inc!(dat, (rhs[1]), b'\n');
 
-            extract_inc!(dat, a, b'-');
-            extract_inc!(dat, b, b',');
-            extract_inc!(dat, c, b'-');
+            let diff = lhs - rhs;
 
-            let ac = a - c;
-
-            if ac == 0 {
-                if *dat.add(1) == b'\n' {
-                    dat = dat.add(2);
-                } else {
-                    dat = dat.add(3);
-                }
-                sum += 1;
-                continue;
-            }
-
-            extract_inc!(dat, d, b'\n');
-            let bd = b - d;
-
-            let is_subset = ac.is_negative() != bd.is_negative() || bd == 0;
+            let is_subset =
+                diff[0].is_negative() != diff[1].is_negative() || diff[0] == 0 || diff[1] == 0;
             if is_subset {
                 sum += 1;
             }
