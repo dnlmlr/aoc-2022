@@ -47,6 +47,69 @@ pub fn day4_part2(dataset: &[u8]) -> i64 {
         .count() as i64
 }
 
+#[aoc(day4, part1, single_pass)]
+pub fn day4_part1_optimized(dataset: &[u8]) -> i64 {
+    // The bits that are set in the mask uniquely identifiy if the character is a number,
+    // newline or either '-' / ','.
+    // - For numbers both bits are set
+    // - For '-' and ',' only the first bit is set
+    // - For newline none of the bits are set
+    const TYPE_MASK: u8 = 0b00110000;
+    const DIGIT_MASK: u8 = 0b00110000;
+    const NEWLINE_MASK: u8 = 0b000000;
+
+    let mut nums = 0_u64;
+    let mut nums_i = 0;
+
+    let mut sum = 0;
+    let mut curr = 0_u64;
+
+    let mut i = 0;
+    while i < dataset.len() {
+        let char_type = dataset[i] & TYPE_MASK;
+
+        if char_type == DIGIT_MASK {
+            curr = curr << 8 | dataset[i] as u64;
+        } else if char_type == NEWLINE_MASK {
+            let a = nums & 0xffff;
+            let b = (nums >> 16) & 0xffff;
+            let c = (nums >> 32) & 0xffff;
+            let d = curr;
+
+            let is_subset = a >= c && b <= d || c >= a && d <= b;
+
+            if is_subset {
+                sum += 1;
+            }
+
+            nums = 0;
+            curr = 0;
+            nums_i = 0;
+        } else {
+            nums |= (curr << (nums_i * 16)) as u64;
+            curr = 0;
+            nums_i += 1;
+        }
+
+        i += 1;
+    }
+
+    if dataset.last() != Some(&b'\n') {
+        let a = nums & 0xffff;
+        let b = (nums >> 16) & 0xffff;
+        let c = (nums >> 32) & 0xffff;
+        let d = curr;
+
+        let is_subset = a >= c && b <= d || c >= a && d <= b;
+
+        if is_subset {
+            sum += 1;
+        }
+    }
+
+    sum
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
