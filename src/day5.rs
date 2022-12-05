@@ -126,6 +126,75 @@ pub fn day5_part1_optimized(dataset: &[u8]) -> String {
     out
 }
 
+#[aoc(day5, part2, optimized)]
+pub fn day5_part2_optimized(dataset: &[u8]) -> String {
+    let mut stacks = [0_u8; 64 * 9];
+    let mut stack_idx = [0_usize; 9];
+
+    unsafe {
+        let s_ptr = stacks.as_mut_ptr();
+        let sidx_ptr = stack_idx.as_mut_ptr();
+
+        let mut ds_ptr = dataset.as_ptr().add(1);
+        let ds_ptr_end = dataset.as_ptr_range().end;
+
+        let mut k = 7;
+        while *ds_ptr != b'1' {
+            for i in 0..9 {
+                let val = *ds_ptr;
+                if val != b' ' {
+                    *s_ptr.add((i << 6) + k) = val;
+                    *sidx_ptr.add(i) += 1;
+                }
+                ds_ptr = ds_ptr.add(4);
+            }
+            k -= 1;
+        }
+        ds_ptr = ds_ptr.add(36);
+
+        while ds_ptr < ds_ptr_end {
+            ds_ptr = ds_ptr.add(5);
+
+            let cd0 = *ds_ptr;
+            let cd1 = *ds_ptr.add(1);
+
+            let count;
+            if cd1 == b' ' {
+                ds_ptr = ds_ptr.add(7);
+                count = (cd0 - b'0') as usize;
+            } else {
+                ds_ptr = ds_ptr.add(8);
+                count = cd0 as usize * 10 + cd1 as usize - (b'0' as usize * 11);
+            }
+
+            let from = *ds_ptr as usize - b'0' as usize - 1;
+            let to = *ds_ptr.add(5) as usize - b'0' as usize - 1;
+
+            ds_ptr = ds_ptr.add(7);
+
+            *sidx_ptr.add(from) -= count;
+
+            s_ptr
+                .add((to << 6) + *sidx_ptr.add(to))
+                .copy_from_nonoverlapping(s_ptr.add((from << 6) + *sidx_ptr.add(from)), count);
+
+            *sidx_ptr.add(to) += count;
+        }
+    }
+
+    let mut out = String::with_capacity(9);
+
+    for i in 0..9 {
+        if stack_idx[i] == 0 {
+            continue;
+        }
+        let val = stacks[i * 64 + stack_idx[i] - 1];
+        out.push(val as char);
+    }
+
+    out
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
