@@ -56,6 +56,104 @@ pub fn day5_part1(dataset: &[u8]) -> String {
         .collect()
 }
 
+#[derive(Debug, Clone)]
+struct Stack {
+    data: [u8; 64],
+    idx: usize,
+}
+
+impl Stack {
+    fn new() -> Self {
+        Self {
+            data: [0; 64],
+            idx: 0,
+        }
+    }
+
+    fn reverse(&mut self) {
+        self.data[..self.idx].reverse();
+    }
+
+    fn push(&mut self, val: u8) {
+        self.data[self.idx] = val;
+        self.idx += 1;
+    }
+
+    fn pop(&mut self) -> u8 {
+        self.idx -= 1;
+        self.data[self.idx]
+    }
+
+    fn last(&self) -> Option<u8> {
+        (self.idx > 0).then(|| self.data[self.idx - 1])
+    }
+}
+
+#[aoc(day5, part1, optimized)]
+pub fn day5_part1_optimized(dataset: &[u8]) -> String {
+    let mut stacks = [
+        Stack::new(),
+        Stack::new(),
+        Stack::new(),
+        Stack::new(),
+        Stack::new(),
+        Stack::new(),
+        Stack::new(),
+        Stack::new(),
+        Stack::new(),
+    ];
+
+    let mut i = 0;
+
+    dataset
+        .array_chunks::<36>()
+        .take_while(|line| line[1] != b'1')
+        .for_each(|line| {
+            i += 36;
+            line.array_chunks::<4>().enumerate().for_each(|(k, c)| {
+                if c[1] != b' ' {
+                    stacks[k].push(c[1]);
+                }
+            });
+        });
+
+    for stack in &mut stacks {
+        stack.reverse();
+    }
+
+    i += 37;
+    while i < dataset.len() {
+        i += 5;
+
+        let count;
+        if unsafe { *dataset.get_unchecked(i + 1) } == b' ' {
+            count = (unsafe { *dataset.get_unchecked(i) } - b'0') as usize;
+            i += 7;
+        } else {
+            count = unsafe { *dataset.get_unchecked(i) } as usize * 10
+                + unsafe { *dataset.get_unchecked(i + 1) } as usize
+                - (b'0' as usize * 11);
+            i += 8;
+        }
+
+        let from = (unsafe { *dataset.get_unchecked(i) } - b'0') as usize - 1;
+        let to = (unsafe { *dataset.get_unchecked(i + 5) } - b'0') as usize - 1;
+
+        i += 7;
+
+        for _ in 0..count {
+            let val = stacks[from].pop();
+            stacks[to].push(val);
+        }
+    }
+
+    stacks
+        .into_iter()
+        .filter_map(|stack| stack.last())
+        .map(|c| c as char)
+        .collect::<String>()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
