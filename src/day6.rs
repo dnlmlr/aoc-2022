@@ -20,32 +20,42 @@ pub fn day6_part1(dataset: &[u8]) -> i64 {
 
 #[aoc(day6, part1, optimized)]
 pub fn day6_part1_optimized(dataset: &[u8]) -> i64 {
-    for i in 4..=dataset.len() {
-        let window = u32::from_le_bytes(dataset[i - 4..i].try_into().unwrap());
+    let mut window_flags = [0_u8; 32];
 
-        let mut mix = window ^ (window >> 8);
+    let mut num_duplicates = 0;
 
-        if (mix & 0xff) == 0
-            || (mix & (0xff << 8)) == 0
-            || (mix & (0xff << 16)) == 0
-        {
-            continue;
+    for i in 0..4 {
+        let idx = (dataset[i] & 0b11111) as usize;
+        window_flags[idx] += 1;
+        if window_flags[idx] > 1 {
+            num_duplicates += 1;
         }
-        
-        mix = window ^ (window >> 16);
-        if (mix & 0xff) == 0
-            || (mix & (0xff << 8)) == 0
-        {
-            continue;
-        }
-        
-        mix = window ^ (window >> 24);
-        if (mix & 0xff) == 0
-        {
-            continue;
+    }
+
+    if num_duplicates == 0 {
+        return 4;
+    }
+
+    for i in 4..dataset.len() {
+        // idx is masked with 31, which means it can't be larger than 31. Therefore it will always
+        // be a valid array index
+        let idx = (dataset[i] & 0b11111) as usize;
+        *unsafe { window_flags.get_unchecked_mut(idx) } += 1;
+        if unsafe { *window_flags.get_unchecked(idx) } > 1 {
+            num_duplicates += 1;
         }
 
-        return i as i64;
+        // idx is masked with 31, which means it can't be larger than 31. Therefore it will always
+        // be a valid array index
+        let idx = (dataset[i - 4] & 0b11111) as usize;
+        *unsafe { window_flags.get_unchecked_mut(idx) } -= 1;
+        if unsafe { *window_flags.get_unchecked(idx) } >= 1 {
+            num_duplicates -= 1;
+        }
+
+        if num_duplicates == 0 {
+            return i as i64 + 1;
+        }
     }
     return -1;
 }
