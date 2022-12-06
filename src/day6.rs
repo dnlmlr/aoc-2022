@@ -26,38 +26,31 @@ pub fn day6_part2(dataset: &[u8]) -> i64 {
 /// Returns 0 when no unique window is found
 #[inline(always)]
 fn find_unique_window_pos_optimized(dataset: &[u8], window_size: usize) -> usize {
-    let mut window_flags = 0_u32;
-
     let mut num_count = 0;
 
-    let mut i = 0;
-    while i < window_size {
-        let idx = 1 << (*unsafe { dataset.get_unchecked(i) } & 0b0001_1111) as usize;
-        if window_flags & idx != 0 {
-            num_count += 1;
-        }
-        window_flags ^= idx;
+    let mut window_flags: u32 = dataset[..window_size]
+        .iter()
+        .map(|&b| b & 0b0001_1111)
+        .fold(0, |flags, idx| {
+            num_count += flags >> idx & 1;
+            flags ^ (1 << idx)
+        });
 
-        i += 1;
-    }
-
+    let mut i = window_size;
     while num_count != 0 {
-        let idx1 = 1 << (*unsafe { dataset.get_unchecked(i) } & 0b11111) as usize;
-        let idx2 = 1 << (*unsafe { dataset.get_unchecked(i - window_size) } & 0b11111) as usize;
+        let idx1 = (dataset[i] & 0b11111) as usize;
+        let idx2 = (dataset[i - window_size] & 0b11111) as usize;
 
-        if window_flags & idx1 != 0 {
-            num_count += 1;
-        }
-        window_flags ^= idx1;
+        num_count += window_flags >> idx1 & 1;
+        window_flags ^= 1 << idx1;
 
-        if window_flags & idx2 == 0 {
-            num_count -= 1;
-        }
-        window_flags ^= idx2;
+        num_count -= (window_flags >> idx2 & 1) ^ 1;
+        window_flags ^= 1 << idx2;
 
         i += 1;
     }
-    return i;
+
+    i
 }
 
 #[aoc(day6, part1, optimized)]

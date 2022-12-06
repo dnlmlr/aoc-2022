@@ -3,6 +3,7 @@
 #![feature(iter_array_chunks)]
 #![feature(core_intrinsics)]
 #![feature(split_array)]
+#![feature(array_windows)]
 
 use aoc_runner_derive::aoc_lib;
 
