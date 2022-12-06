@@ -18,13 +18,19 @@ pub fn day6_part1(dataset: &[u8]) -> i64 {
     find_unique_window_pos(dataset, 4).unwrap() as i64
 }
 
-#[aoc(day6, part1, optimized)]
-pub fn day6_part1_optimized(dataset: &[u8]) -> i64 {
+#[aoc(day6, part2)]
+pub fn day6_part2(dataset: &[u8]) -> i64 {
+    find_unique_window_pos(dataset, 14).unwrap() as i64
+}
+
+/// Returns 0 when no unique window is found
+#[inline(always)]
+fn find_unique_window_pos_optimized(dataset: &[u8], window_size: usize) -> usize {
     let mut window_flags = [0_u8; 32];
 
     let mut num_duplicates = 0;
 
-    for i in 0..4 {
+    for i in 0..window_size {
         let idx = (dataset[i] & 0b11111) as usize;
         window_flags[idx] += 1;
         if window_flags[idx] > 1 {
@@ -33,10 +39,10 @@ pub fn day6_part1_optimized(dataset: &[u8]) -> i64 {
     }
 
     if num_duplicates == 0 {
-        return 4;
+        return window_size;
     }
 
-    for i in 4..dataset.len() {
+    for i in window_size..dataset.len() {
         // idx is masked with 31, which means it can't be larger than 31. Therefore it will always
         // be a valid array index
         let idx = (dataset[i] & 0b11111) as usize;
@@ -47,22 +53,27 @@ pub fn day6_part1_optimized(dataset: &[u8]) -> i64 {
 
         // idx is masked with 31, which means it can't be larger than 31. Therefore it will always
         // be a valid array index
-        let idx = (dataset[i - 4] & 0b11111) as usize;
+        let idx = (dataset[i - window_size] & 0b11111) as usize;
         *unsafe { window_flags.get_unchecked_mut(idx) } -= 1;
         if unsafe { *window_flags.get_unchecked(idx) } >= 1 {
             num_duplicates -= 1;
         }
 
         if num_duplicates == 0 {
-            return i as i64 + 1;
+            return i + 1;
         }
     }
-    return -1;
+    return 0;
 }
 
-#[aoc(day6, part2)]
-pub fn day6_part2(dataset: &[u8]) -> i64 {
-    find_unique_window_pos(dataset, 14).unwrap() as i64
+#[aoc(day6, part1, optimized)]
+pub fn day6_part1_optimized(dataset: &[u8]) -> i64 {
+    find_unique_window_pos_optimized(dataset, 4) as i64
+}
+
+#[aoc(day6, part2, optimized)]
+pub fn day6_part2_optimized(dataset: &[u8]) -> i64 {
+    find_unique_window_pos_optimized(dataset, 14) as i64
 }
 
 #[cfg(test)]
@@ -77,6 +88,6 @@ mod test {
 
     #[test]
     fn test_day6_part2() {
-        assert_eq!(19, day6_part2(INPUT));
+        assert_eq!(19, day6_part2_optimized(INPUT));
     }
 }
