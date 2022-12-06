@@ -18,6 +18,38 @@ pub fn day6_part1(dataset: &[u8]) -> i64 {
     find_unique_window_pos(dataset, 4).unwrap() as i64
 }
 
+#[aoc(day6, part1, optimized)]
+pub fn day6_part1_optimized(dataset: &[u8]) -> i64 {
+    for i in 4..=dataset.len() {
+        let window = u32::from_le_bytes(dataset[i - 4..i].try_into().unwrap());
+
+        let mut mix = window ^ (window >> 8);
+
+        if (mix & 0xff) == 0
+            || (mix & (0xff << 8)) == 0
+            || (mix & (0xff << 16)) == 0
+        {
+            continue;
+        }
+        
+        mix = window ^ (window >> 16);
+        if (mix & 0xff) == 0
+            || (mix & (0xff << 8)) == 0
+        {
+            continue;
+        }
+        
+        mix = window ^ (window >> 24);
+        if (mix & 0xff) == 0
+        {
+            continue;
+        }
+
+        return i as i64;
+    }
+    return -1;
+}
+
 #[aoc(day6, part2)]
 pub fn day6_part2(dataset: &[u8]) -> i64 {
     find_unique_window_pos(dataset, 14).unwrap() as i64
