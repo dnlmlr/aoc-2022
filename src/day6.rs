@@ -23,6 +23,33 @@ pub fn day6_part2(dataset: &[u8]) -> i64 {
     find_unique_window_pos(dataset, 14).unwrap() as i64
 }
 
+macro_rules! shift_window {
+    ($dataset:ident, $window_flags:ident, $window_size:expr, $num_duplicates:expr, $offset:expr, $shift:expr) => {
+        // idx is masked with 31, which means it can't be larger than 31. Therefore it will always
+        // be a valid array index
+        let idx1 = ($dataset[$offset + $shift] & 0b11111) as usize;
+        let idx2 = ($dataset[$offset - $window_size + $shift] & 0b11111) as usize;
+
+        if idx1 != idx2 {
+            *unsafe { $window_flags.get_unchecked_mut(idx1) } += 1;
+            if unsafe { *$window_flags.get_unchecked(idx1) } > 1 {
+                $num_duplicates += 1;
+            }
+
+            // idx is masked with 31, which means it can't be larger than 31. Therefore it will always
+            // be a valid array index
+            *unsafe { $window_flags.get_unchecked_mut(idx2) } -= 1;
+            if unsafe { *$window_flags.get_unchecked(idx2) } >= 1 {
+                $num_duplicates -= 1;
+            }
+
+            if $num_duplicates == 0 {
+                return $offset + 1 + $shift;
+            }
+        }
+    };
+}
+
 /// Returns 0 when no unique window is found
 #[inline(always)]
 fn find_unique_window_pos_optimized(dataset: &[u8], window_size: usize) -> usize {
@@ -42,26 +69,18 @@ fn find_unique_window_pos_optimized(dataset: &[u8], window_size: usize) -> usize
         return window_size;
     }
 
-    for i in window_size..dataset.len() {
-        // idx is masked with 31, which means it can't be larger than 31. Therefore it will always
-        // be a valid array index
-        let idx = (dataset[i] & 0b11111) as usize;
-        *unsafe { window_flags.get_unchecked_mut(idx) } += 1;
-        if unsafe { *window_flags.get_unchecked(idx) } > 1 {
-            num_duplicates += 1;
-        }
+    let mut i = window_size;
+    while i < dataset.len() {
+        shift_window!(dataset, window_flags, window_size, num_duplicates, i, 0);
+        shift_window!(dataset, window_flags, window_size, num_duplicates, i, 1);
+        shift_window!(dataset, window_flags, window_size, num_duplicates, i, 2);
+        shift_window!(dataset, window_flags, window_size, num_duplicates, i, 3);
+        shift_window!(dataset, window_flags, window_size, num_duplicates, i, 4);
+        shift_window!(dataset, window_flags, window_size, num_duplicates, i, 5);
+        shift_window!(dataset, window_flags, window_size, num_duplicates, i, 6);
+        shift_window!(dataset, window_flags, window_size, num_duplicates, i, 7);
 
-        // idx is masked with 31, which means it can't be larger than 31. Therefore it will always
-        // be a valid array index
-        let idx = (dataset[i - window_size] & 0b11111) as usize;
-        *unsafe { window_flags.get_unchecked_mut(idx) } -= 1;
-        if unsafe { *window_flags.get_unchecked(idx) } >= 1 {
-            num_duplicates -= 1;
-        }
-
-        if num_duplicates == 0 {
-            return i + 1;
-        }
+        i += 8;
     }
     return 0;
 }
@@ -88,6 +107,6 @@ mod test {
 
     #[test]
     fn test_day6_part2() {
-        assert_eq!(19, day6_part2_optimized(INPUT));
+        assert_eq!(19, day6_part2(INPUT));
     }
 }
