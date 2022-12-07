@@ -1,64 +1,111 @@
 use aoc_runner_derive::aoc;
 
-#[inline(always)]
-fn bstoi(num: &[u8]) -> i64 {
-    num.iter().fold(0, |a, &b| a * 10 + (b & 0xf) as i64)
-}
-
 #[aoc(day7, part1, optimized)]
 pub fn day7_part1_optimized(dataset: &[u8]) -> i64 {
+    let dataset = if *dataset.last().unwrap() == b'\n' {
+        &dataset[..dataset.len() - 1]
+    } else {
+        dataset
+    };
     const MAX_SIZE: i64 = 100_000;
 
-    let mut cwd = Vec::<i64>::with_capacity(32);
+    let mut cwd = [0_i64; 16];
+    let mut cwd_idx = 0;
     let mut total_size = 0;
 
-    dataset
-        .split(|&b| b == b'$')
-        .skip(1)
-        .for_each(|cmd_with_output| {
-            let mut cmd_with_output =
-                cmd_with_output[1..cmd_with_output.len() - 1].split(|&b| b == b'\n');
+    // skip "$ "
+    let mut i = 2;
 
-            let cmd = cmd_with_output.next().unwrap();
-
-            if cmd[0] == b'c' {
-                // cmd = cd [dir]
-                if cmd[3] == b'.' {
-                    let dir = cwd.pop().unwrap();
-                    if dir <= MAX_SIZE {
-                        total_size += dir;
-                    }
-                } else {
-                    cwd.push(0);
-                    println!("{}", cwd.len());
+    while i < dataset.len() {
+        // "cd [...]" has 'c' at current offset
+        if dataset[i] == b'c' {
+            // "cd .." has a '.' at +3
+            if dataset[i + 3] == b'.' {
+                cwd_idx -= 1;
+                let dir = cwd[cwd_idx];
+                if dir <= MAX_SIZE {
+                    total_size += dir;
                 }
-            } else {
-                // cmd = ls
-                let dir_size = cmd_with_output
-                    .filter(|fs_entry| fs_entry[0] != b'd')
-                    .map(|file_entry| {
-                        let size_str = file_entry.split(|&b| b == b' ').next().unwrap();
-                        bstoi(size_str)
-                    })
-                    .sum::<i64>();
 
-                cwd.iter_mut().for_each(|entry| *entry += dir_size);
+                // Skip "cd ..[LF]$ "
+                i += 8;
             }
-        });
+            // must be "cd [DIR_NAME]"
+            else {
+                cwd[cwd_idx] = 0;
+                cwd_idx += 1;
 
-    let extra_size = cwd
+                // skip over "cd " and 2 more chars. If "[DIR_NAME]" is only 1 char, this skips to
+                // the next line
+                i += 5;
+
+                // continue skipping until reaching the '$' which denotes the next command
+                while dataset[i] != b'$' {
+                    i += 1;
+                }
+                // skip over the "$ "
+                i += 2;
+            }
+        }
+        // if not c, it has to be a line with ls
+        else {
+            // skip over "ls[LF]"
+            i += 3;
+
+            let mut sum = 0;
+
+            // parse lines until reaching the next command
+            'outer: while dataset[i] != b'$' {
+                // "dir [name]" starts with 'd'
+                if dataset[i] == b'd' {
+                    // skip over "dir " + 1 more
+                    i += 5;
+                } else {
+                    // entry is "[size] [name]"
+
+                    let mut num = (dataset[i] & 0x0f) as i64;
+
+                    i += 1;
+                    // parse digits until reaching the space
+                    while dataset[i] != b' ' {
+                        num = num * 10 + (dataset[i] & 0x0f) as i64;
+                        i += 1;
+                    }
+                    sum += num;
+                }
+
+                // skip until reaching the newline
+                while dataset[i] != b'\n' {
+                    i += 1;
+                    if i >= dataset.len() {
+                        break 'outer;
+                    }
+                }
+
+                // Skip the newline
+                i += 1;
+            }
+
+            // Apply the newly detected sizes to all parent dirs
+            // This range must be valid, since there already were inserts at `[cw_idx-1]`
+            unsafe { cwd.get_unchecked_mut(..cwd_idx) }
+                .iter_mut()
+                .for_each(|entry| *entry += sum);
+
+            // Skip over "$ "
+            i += 2;
+        }
+    }
+
+    // Get the matching sizes of directories still left in the cd stack
+    let extra_size = cwd[..cwd_idx]
         .into_iter()
         .rev()
-        .take_while(|&dir_size| dir_size <= MAX_SIZE)
+        .take_while(|&dir_size| dir_size <= &MAX_SIZE)
         .sum::<i64>();
 
     total_size + extra_size
 }
-
-// #[aoc(day7, part2)]
-// pub fn day7_part2(dataset: &[u8]) -> i64 {
-//     todo!()
-// }
 
 #[cfg(test)]
 mod test {
@@ -86,12 +133,6 @@ $ ls
 8033020 d.log
 5626152 d.ext
 7214296 k"#;
-
-    #[test]
-    fn test_bstoi() {
-        assert_eq!(bstoi(b"8033020"), 8033020);
-        assert_eq!(bstoi(b"8033020"), 8033020);
-    }
 
     #[test]
     fn test_day7_part1() {
