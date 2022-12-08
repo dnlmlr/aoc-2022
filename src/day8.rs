@@ -4,41 +4,58 @@ use aoc_runner_derive::aoc;
 fn grid_count_visible(dataset: &[u8]) -> i64 {
     const N: usize = 99;
     const N1: usize = N + 1;
+    assert_eq!(dataset.len(), N * N1);
 
     let mut matrix = [false; N * N];
 
-    let mut lanes = [0; N];
+    let mut lanes1 = [0; N];
     let mut lanes2 = [0; N];
-    for y in 0..N {
-        let mut n1 = 0;
-        let mut n2 = 0;
-        for x in 0..N {
-            let b1 = unsafe { *dataset.get_unchecked(y * N1 + x) };
-            let b2 = unsafe { *dataset.get_unchecked((N - y - 1) * N1 + (N - x - 1)) };
 
+    lanes1.copy_from_slice(&dataset[..N]);
+    lanes2.copy_from_slice(&dataset[(N - 1) * N1..(N - 1) * N1 + N]);
+
+    for y in 1..N - 1 {
+        let window1: &[u8; N] = unsafe {
+            dataset
+                .get_unchecked(y * N1..y * N1 + N)
+                .try_into()
+                .unwrap_unchecked()
+        };
+        let window2: &[u8; N] = unsafe {
+            dataset
+                .get_unchecked((N - y - 1) * N1..(N - y - 1) * N1 + N)
+                .try_into()
+                .unwrap_unchecked()
+        };
+
+        let mut n1 = window1[0];
+        let mut n2 = window2[N - 1];
+
+        for x in 1..N - 1 {
             let idx1 = y * N + x;
-            let idx2 = (N - y - 1) * N + (N - x - 1);
+            let idx2 = (N - y - 1) * N + x;
 
-            if b1 > n1 {
-                n1 = b1;
+            if window1[x] > lanes1[x] {
+                lanes1[x] = window1[x];
                 matrix[idx1] = true;
             }
-            if b1 > lanes[x] {
-                lanes[x] = b1;
-                matrix[idx1] = true;
+            if window2[x] > lanes2[x] {
+                lanes2[x] = window2[x];
+                matrix[idx2] = true;
             }
 
-            if b2 > n2 {
-                n2 = b2;
-                matrix[idx2] = true;
+            if window1[x] > n1 {
+                n1 = window1[x];
+                matrix[idx1] = true;
             }
-            if b2 > lanes2[x] {
-                lanes2[x] = b2;
-                matrix[idx2] = true;
+            if window2[N - x - 1] > n2 {
+                n2 = window2[N - x - 1];
+                matrix[(N - y - 1) * N + (N - x - 1)] = true;
             }
         }
     }
-    matrix.into_iter().filter(|&b| b).count() as i64
+
+    matrix.into_iter().filter(|&b| b).count() as i64 + (N * 4 - 4) as i64
 }
 
 #[aoc(day8, part1)]
