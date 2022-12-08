@@ -14,6 +14,9 @@ fn grid_count_visible(dataset: &[u8]) -> i64 {
     lanes1.copy_from_slice(&dataset[..N]);
     lanes2.copy_from_slice(&dataset[(N - 1) * N1..(N - 1) * N1 + N]);
 
+    let mut idx1 = N + 1;
+    let mut idx2 = N * N - N * 2 + 1;
+
     for y in 1..N - 1 {
         let window1: &[u8; N] = unsafe {
             dataset
@@ -32,27 +35,28 @@ fn grid_count_visible(dataset: &[u8]) -> i64 {
         let mut n2 = window2[N - 1];
 
         for x in 1..N - 1 {
-            let idx1 = y * N + x;
-            let idx2 = (N - y - 1) * N + x;
-
             if window1[x] > lanes1[x] {
                 lanes1[x] = window1[x];
-                matrix[idx1] = true;
+                *unsafe { matrix.get_unchecked_mut(idx1) } = true;
             }
             if window2[x] > lanes2[x] {
                 lanes2[x] = window2[x];
-                matrix[idx2] = true;
+                *unsafe { matrix.get_unchecked_mut(idx2) } = true;
             }
 
             if window1[x] > n1 {
                 n1 = window1[x];
-                matrix[idx1] = true;
+                *unsafe { matrix.get_unchecked_mut(idx1) } = true;
             }
-            if window2[N - x - 1] > n2 {
-                n2 = window2[N - x - 1];
-                matrix[(N - y - 1) * N + (N - x - 1)] = true;
+            if window2[N - 1 - x] > n2 {
+                n2 = window2[N - 1 - x];
+                *unsafe { matrix.get_unchecked_mut((N - y - 1) * N + (N - x - 1)) } = true;
             }
+            idx1 += 1;
+            idx2 += 1;
         }
+        idx1 += 2;
+        idx2 = idx2 + 2 - N * 2;
     }
 
     matrix.into_iter().filter(|&b| b).count() as i64 + (N * 4 - 4) as i64
