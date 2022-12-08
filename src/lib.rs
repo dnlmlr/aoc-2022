@@ -4,6 +4,7 @@
 #![feature(core_intrinsics)]
 #![feature(split_array)]
 #![feature(array_windows)]
+#![feature(slice_internals)]
 
 use aoc_runner_derive::aoc_lib;
 
