@@ -8,37 +8,36 @@ fn grid_count_visible(dataset: &[u8]) -> i64 {
     let mut matrix = [false; N * N];
 
     let mut lanes = [0; N];
+    let mut lanes2 = [0; N];
     for y in 0..N {
-        let mut n = 0;
+        let mut n1 = 0;
+        let mut n2 = 0;
         for x in 0..N {
-            let b = dataset[y * N1 + x];
-            if b > n {
-                n = b;
-                matrix[y * N + x] = true;
+            let b1 = unsafe { *dataset.get_unchecked(y * N1 + x) };
+            let b2 = unsafe { *dataset.get_unchecked((N - y - 1) * N1 + (N - x - 1)) };
+
+            let idx1 = y * N + x;
+            let idx2 = (N - y - 1) * N + (N - x - 1);
+
+            if b1 > n1 {
+                n1 = b1;
+                matrix[idx1] = true;
             }
-            if b > lanes[x] {
-                lanes[x] = b;
-                matrix[y * N + x] = true;
+            if b1 > lanes[x] {
+                lanes[x] = b1;
+                matrix[idx1] = true;
+            }
+
+            if b2 > n2 {
+                n2 = b2;
+                matrix[idx2] = true;
+            }
+            if b2 > lanes2[x] {
+                lanes2[x] = b2;
+                matrix[idx2] = true;
             }
         }
     }
-
-    let mut lanes = [0; N];
-    for y in (0..N).rev() {
-        let mut n = 0;
-        for x in (0..N).rev() {
-            let b = dataset[y * N1 + x];
-            if b > n {
-                n = b;
-                matrix[y * N + x] = true;
-            }
-            if b > lanes[x] {
-                lanes[x] = b;
-                matrix[y * N + x] = true;
-            }
-        }
-    }
-
     matrix.into_iter().filter(|&b| b).count() as i64
 }
 
