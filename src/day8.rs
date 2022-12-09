@@ -72,24 +72,24 @@ pub fn day8_part1(dataset: &[u8]) -> i64 {
 //     0
 // }
 
-#[cfg(test)]
-mod test {
-    use super::*;
+// #[cfg(test)]
+// mod test {
+//     use super::*;
 
-    const INPUT: &[u8] = br#"30373
-25512
-65332
-33549
-35390
-"#;
+//     const INPUT: &[u8] = br#"30373
+// 25512
+// 65332
+// 33549
+// 35390
+// "#;
 
-    #[test]
-    fn test_day8_part1() {
-        assert_eq!(21, day8_part1(INPUT));
-    }
+//     #[test]
+//     fn test_day8_part1() {
+//         assert_eq!(21, day8_part1(INPUT));
+//     }
 
-    // #[test]
-    // fn test_day7_part2() {
-    //     assert_eq!(942298, day7_part2(include_bytes!("../input/2022/day7.txt")));
-    // }
-}
+//     // #[test]
+//     // fn test_day7_part2() {
+//     //     assert_eq!(942298, day7_part2(include_bytes!("../input/2022/day7.txt")));
+//     // }
+// }
