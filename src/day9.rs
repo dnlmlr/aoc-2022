@@ -1,6 +1,6 @@
 use aoc_runner_derive::aoc;
 
-struct Bitset([u64; 16384]);
+struct Bitset([u64; (1024 * 1024) / 64]);
 
 impl Bitset {
     #[inline(always)]
@@ -15,10 +15,10 @@ impl Bitset {
 
 #[aoc(day9, part1)]
 pub fn day9_part1(dataset: &[u8]) -> i64 {
-    let mut head: (i32, i32) = (512, 512);
-    let mut tail: (i32, i32) = (512, 512);
+    let mut head: (i32, i32) = (511, 511);
+    let mut tail: (i32, i32) = (511, 511);
 
-    let mut set = Bitset([0_u64; 16384]);
+    let mut set = Bitset([0_u64; (1024 * 1024) / 64]);
     set.get_and_set(((tail.0 << 10) | tail.1) as usize);
 
     let mut count = 1;
@@ -30,106 +30,49 @@ pub fn day9_part1(dataset: &[u8]) -> i64 {
         // condition
         unsafe {
             dir = *dataset.get_unchecked(i);
-            if dataset[i + 3] == b'\n' {
-                dist = *dataset.get_unchecked(i + 2) & 0xf;
+            let d1 = *dataset.get_unchecked(i + 2);
+            let d2 = *dataset.get_unchecked(i + 3);
+            if d2 == b'\n' {
+                dist = d1 & 0xf;
                 i += 4;
             } else {
-                dist = (*dataset.get_unchecked(i + 2) & 0xf) * 10
-                    + (*dataset.get_unchecked(i + 3) & 0xf);
+                dist = (d1 & 0xf) * 10 + (d2 & 0xf);
                 i += 5;
             };
         }
 
-        match dir {
-            b'R' => {
-                for _ in 0..2.min(dist) {
-                    head.0 += 1;
-                    if (head.0 - tail.0).abs() > 1 {
-                        tail.0 = head.0 - 1;
-                        tail.1 = head.1;
-                        let id = (tail.0 << 10) | tail.1;
-                        if !set.get_and_set(id as usize) {
-                            count += 1;
-                        }
-                    }
-                }
-                for _ in 2..dist {
-                    head.0 += 1;
-                    tail.0 += 1;
-                    tail.1 = head.1;
-                    let id = (tail.0 << 10) | tail.1;
-                    if !set.get_and_set(id as usize) {
-                        count += 1;
-                    }
+        let (dx, dy) = if dir == b'R' {
+            (1, 0)
+        } else if dir == b'L' {
+            (-1, 0)
+        } else if dir == b'U' {
+            (0, 1)
+        } else {
+            (0, -1)
+        };
+
+        for _ in 0..2.min(dist) {
+            head.0 += dx;
+            head.1 += dy;
+            if (head.0 - tail.0).abs() > 1 || (head.1 - tail.1).abs() > 1 {
+                tail.0 = head.0 - dx;
+                tail.1 = head.1 - dy;
+                let id = (tail.0 << 10) | tail.1;
+                if !set.get_and_set(id as usize) {
+                    count += 1;
                 }
             }
-            b'L' => {
-                for _ in 0..2.min(dist) {
-                    head.0 -= 1;
-                    if (head.0 - tail.0).abs() > 1 {
-                        tail.0 = head.0 + 1;
-                        tail.1 = head.1;
-                        let id = (tail.0 << 10) | tail.1;
-                        if !set.get_and_set(id as usize) {
-                            count += 1;
-                        }
-                    }
-                }
-                for _ in 2..dist {
-                    head.0 -= 1;
-                    tail.0 -= 1;
-                    tail.1 = head.1;
-                    let id = (tail.0 << 10) | tail.1;
-                    if !set.get_and_set(id as usize) {
-                        count += 1;
-                    }
-                }
+        }
+
+        for _ in 2..dist {
+            head.0 += dx;
+            head.1 += dy;
+            tail.0 = head.0 - dx;
+            tail.1 = head.1 - dy;
+            let id = (tail.0 << 10) | tail.1;
+            if !set.get_and_set(id as usize) {
+                count += 1;
             }
-            b'U' => {
-                for _ in 0..2.min(dist) {
-                    head.1 += 1;
-                    if (head.1 - tail.1).abs() > 1 {
-                        tail.1 = head.1 - 1;
-                        tail.0 = head.0;
-                        let id = (tail.0 << 10) | tail.1;
-                        if !set.get_and_set(id as usize) {
-                            count += 1;
-                        }
-                    }
-                }
-                for _ in 2..dist {
-                    head.1 += 1;
-                    tail.1 += 1;
-                    tail.0 = head.0;
-                    let id = (tail.0 << 10) | tail.1;
-                    if !set.get_and_set(id as usize) {
-                        count += 1;
-                    }
-                }
-            }
-            b'D' => {
-                for _ in 0..2.min(dist) {
-                    head.1 -= 1;
-                    if (head.1 - tail.1).abs() > 1 {
-                        tail.1 = head.1 + 1;
-                        tail.0 = head.0;
-                        let id = (tail.0 << 10) | tail.1;
-                        if !set.get_and_set(id as usize) {
-                            count += 1;
-                        }
-                    }
-                }
-                for _ in 2..dist {
-                    head.1 -= 1;
-                    tail.1 -= 1;
-                    tail.0 = head.0;
-                    let id = (tail.0 << 10) | tail.1;
-                    if !set.get_and_set(id as usize) {
-                        count += 1;
-                    }
-                }
-            }
-            _ => unreachable!(),
         }
     }
 
