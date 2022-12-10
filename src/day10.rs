@@ -49,6 +49,24 @@ pub fn day10_part1(dataset: &[u8]) -> i64 {
             countdown -= 2;
             cycles += 2;
             x += val;
+            if unsafe { *dataset.get_unchecked(i) } == b'n' {
+                cycles += 1;
+                countdown -= 1;
+                i += 5;
+                continue;
+            }
+
+            let (val, ii) = bstosi(unsafe {
+                dataset
+                    .get_unchecked(i + 5..i + 8)
+                    .try_into()
+                    .unwrap_unchecked()
+            });
+            i += 5 + ii;
+
+            countdown -= 2;
+            cycles += 2;
+            x += val;
         }
 
         if unsafe { *dataset.get_unchecked(i) } == b'n' {
@@ -70,17 +88,11 @@ pub fn day10_part1(dataset: &[u8]) -> i64 {
         });
         i += 5 + ii;
 
-        cycles += 1;
-        countdown -= 1;
-        if countdown == 0 {
-            result += cycles * x;
-            countdown = 40;
-        }
-        cycles += 1;
-        countdown -= 1;
-        if countdown == 0 {
-            result += cycles * x;
-            countdown = 40;
+        cycles += 2;
+        countdown -= 2;
+        if countdown <= 0 {
+            result += (cycles + countdown) * x;
+            countdown += 40;
         }
         x += val;
     }
