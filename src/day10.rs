@@ -21,19 +21,19 @@ fn bstosi(s: &[u8; 3]) -> (i32, usize) {
 
 #[aoc(day10, part1)]
 pub fn day10_part1(dataset: &[u8]) -> i64 {
-    let mut cycles = 0;
-    let mut x = 1;
+    let mut cycles_countdown = std::simd::Simd::from_array([0, 20]);
+    let simd_delta = std::simd::Simd::from_array([1, -1]);
+    let simd_delta2 = std::simd::Simd::from_array([2, -2]);
 
-    let mut countdown = 20;
+    let mut x = 1;
 
     let mut result = 0;
 
     let mut i = 0;
     while i < dataset.len() - 9 {
-        while countdown > 4 {
+        while cycles_countdown[1] > 4 {
             if unsafe { *dataset.get_unchecked(i) } == b'n' {
-                cycles += 1;
-                countdown -= 1;
+                cycles_countdown += simd_delta;
                 i += 5;
                 continue;
             }
@@ -46,12 +46,10 @@ pub fn day10_part1(dataset: &[u8]) -> i64 {
             });
             i += 5 + ii;
 
-            countdown -= 2;
-            cycles += 2;
+            cycles_countdown += simd_delta2;
             x += val;
             if unsafe { *dataset.get_unchecked(i) } == b'n' {
-                cycles += 1;
-                countdown -= 1;
+                cycles_countdown += simd_delta;
                 i += 5;
                 continue;
             }
@@ -64,17 +62,15 @@ pub fn day10_part1(dataset: &[u8]) -> i64 {
             });
             i += 5 + ii;
 
-            countdown -= 2;
-            cycles += 2;
+            cycles_countdown += simd_delta2;
             x += val;
         }
 
         if unsafe { *dataset.get_unchecked(i) } == b'n' {
-            cycles += 1;
-            countdown -= 1;
-            if countdown == 0 {
-                result += cycles * x;
-                countdown = 40;
+            cycles_countdown += simd_delta;
+            if cycles_countdown[1] == 0 {
+                result += cycles_countdown[0] * x;
+                cycles_countdown[1] = 40;
             }
             i += 5;
             continue;
@@ -88,11 +84,10 @@ pub fn day10_part1(dataset: &[u8]) -> i64 {
         });
         i += 5 + ii;
 
-        cycles += 2;
-        countdown -= 2;
-        if countdown <= 0 {
-            result += (cycles + countdown) * x;
-            countdown += 40;
+        cycles_countdown += simd_delta2;
+        if cycles_countdown[1] <= 0 {
+            result += (cycles_countdown[0] + cycles_countdown[1]) * x;
+            cycles_countdown[1] += 40;
         }
         x += val;
     }
