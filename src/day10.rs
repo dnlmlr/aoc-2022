@@ -30,6 +30,27 @@ pub fn day10_part1(dataset: &[u8]) -> i64 {
 
     let mut i = 0;
     while i < dataset.len() - 9 {
+        while countdown > 4 {
+            if unsafe { *dataset.get_unchecked(i) } == b'n' {
+                cycles += 1;
+                countdown -= 1;
+                i += 5;
+                continue;
+            }
+
+            let (val, ii) = bstosi(unsafe {
+                dataset
+                    .get_unchecked(i + 5..i + 8)
+                    .try_into()
+                    .unwrap_unchecked()
+            });
+            i += 5 + ii;
+
+            countdown -= 2;
+            cycles += 2;
+            x += val;
+        }
+
         if unsafe { *dataset.get_unchecked(i) } == b'n' {
             cycles += 1;
             countdown -= 1;
