@@ -95,6 +95,75 @@ pub fn day10_part1(dataset: &[u8]) -> i64 {
     result as i64
 }
 
+#[aoc(day10, part2)]
+pub fn day10_part2(dataset: &[u8]) -> String {
+    let mut cycles = 0_i32;
+    let mut x = 1_i32;
+
+    let mut result = vec![b'.'; 240];
+
+    let mut i = 0;
+    while i < dataset.len() - 9 * 2 {
+        if unsafe { *dataset.get_unchecked(i) } == b'n' {
+            if (cycles % 40 - x).abs() < 2 {
+                result[cycles as usize] = b'#';
+            }
+            cycles += 1;
+            i += 5;
+            continue;
+        }
+
+        let (val, ii) = bstosi(unsafe {
+            dataset
+                .get_unchecked(i + 5..i + 8)
+                .try_into()
+                .unwrap_unchecked()
+        });
+        i += 5 + ii;
+
+        if (cycles % 40 - x).abs() < 2 {
+            result[cycles as usize] = b'#';
+        }
+        cycles += 1;
+        if (cycles % 40 - x).abs() < 2 {
+            result[cycles as usize] = b'#';
+        }
+        cycles += 1;
+
+        x += val;
+
+        if unsafe { *dataset.get_unchecked(i) } == b'n' {
+            if (cycles % 40 - x).abs() < 2 {
+                result[cycles as usize] = b'#';
+            }
+            cycles += 1;
+            i += 5;
+            continue;
+        }
+
+        let (val, ii) = bstosi(unsafe {
+            dataset
+                .get_unchecked(i + 5..i + 8)
+                .try_into()
+                .unwrap_unchecked()
+        });
+        i += 5 + ii;
+
+        if (cycles % 40 - x).abs() < 2 {
+            result[cycles as usize] = b'#';
+        }
+        cycles += 1;
+        if (cycles % 40 - x).abs() < 2 {
+            result[cycles as usize] = b'#';
+        }
+        cycles += 1;
+
+        x += val;
+    }
+
+    unsafe { String::from_utf8_unchecked(result) }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -103,10 +172,25 @@ mod test {
     fn test_day10_part1() {
         assert_eq!(13140, day10_part1(INPUT));
     }
-    // #[test]
-    // fn test_day10_part2() {
-    //     assert_eq!(0, day10_part2(INPUT));
-    // }
+
+    #[test]
+    fn test_day10_part2() {
+        assert_eq!(
+            [
+                "###...##..###..#..#.####.#..#.####...##.",
+                "#..#.#..#.#..#.#.#..#....#.#..#.......#.",
+                "#..#.#..#.#..#.##...###..##...###.....#.",
+                "###..####.###..#.#..#....#.#..#.......#.",
+                "#....#..#.#....#.#..#....#.#..#....#..#.",
+                "#....#..#.#....#..#.#....#..#.####..##..",
+            ]
+            .into_iter()
+            .map(|line| line.chars())
+            .flatten()
+            .collect::<String>(),
+            day10_part2(include_bytes!("../input/2022/day10.txt"))
+        );
+    }
 
     const INPUT: &[u8] = br#"addx 15
 addx -11
