@@ -105,7 +105,37 @@ pub fn day10_part2(dataset: &[u8]) -> String {
     let mut i = 0;
     while i < dataset.len() - 9 * 2 {
         let mut c = cycles % 40;
-        while c < 39 {
+        while c < 36 {
+            if unsafe { *dataset.get_unchecked(i) } == b'n' {
+                if (c - x).abs() < 2 {
+                    result[cycles as usize] = b'#';
+                }
+                cycles += 1;
+                c += 1;
+                i += 5;
+            } else {
+                let (val, ii) = bstosi(unsafe {
+                    dataset
+                        .get_unchecked(i + 5..i + 8)
+                        .try_into()
+                        .unwrap_unchecked()
+                });
+                i += 5 + ii;
+
+                if (c - x).abs() < 2 {
+                    result[cycles as usize] = b'#';
+                }
+                cycles += 1;
+                c += 1;
+                if (c - x).abs() < 2 {
+                    result[cycles as usize] = b'#';
+                }
+                cycles += 1;
+                c += 1;
+
+                x += val;
+            }
+
             if unsafe { *dataset.get_unchecked(i) } == b'n' {
                 if (c - x).abs() < 2 {
                     result[cycles as usize] = b'#';
@@ -136,6 +166,34 @@ pub fn day10_part2(dataset: &[u8]) -> String {
                 x += val;
             }
         }
+
+        if unsafe { *dataset.get_unchecked(i) } == b'n' {
+            if (cycles % 40 - x).abs() < 2 {
+                result[cycles as usize] = b'#';
+            }
+            cycles += 1;
+            i += 5;
+        } else {
+            let (val, ii) = bstosi(unsafe {
+                dataset
+                    .get_unchecked(i + 5..i + 8)
+                    .try_into()
+                    .unwrap_unchecked()
+            });
+            i += 5 + ii;
+
+            if (cycles % 40 - x).abs() < 2 {
+                result[cycles as usize] = b'#';
+            }
+            cycles += 1;
+            if (cycles % 40 - x).abs() < 2 {
+                result[cycles as usize] = b'#';
+            }
+            cycles += 1;
+
+            x += val;
+        }
+
         if unsafe { *dataset.get_unchecked(i) } == b'n' {
             if (cycles % 40 - x).abs() < 2 {
                 result[cycles as usize] = b'#';
