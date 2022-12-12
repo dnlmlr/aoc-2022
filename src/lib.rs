@@ -5,6 +5,7 @@
 #![feature(split_array)]
 #![feature(array_windows)]
 #![feature(slice_internals)]
+#![feature(box_syntax)]
 
 use aoc_runner_derive::aoc_lib;
 

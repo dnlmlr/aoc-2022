@@ -201,6 +201,120 @@ pub fn day11_part2(dataset: &[u8]) -> i64 {
         .product::<i64>()
 }
 
+/// Playing around with detecting repeating cycles. THIS DOES NOT WORK ATM!
+#[aoc(day11, part2, experimental)]
+pub fn day11_part2_experimental(dataset: &[u8]) -> i64 {
+    let monkeys = parse(dataset);
+
+    let mut counts = [0; 8];
+
+    let mut items = monkeys
+        .iter()
+        .enumerate()
+        .map(|(mi, m)| {
+            m.items
+                .iter()
+                .take(m.item_count as usize)
+                .map(move |&item| (mi, item))
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+
+    let operations = monkeys
+        .iter()
+        .map(|m| {
+            let op: Box<dyn Fn(u64) -> (u64, usize) + Send + Sync> = match m.operation {
+                Operation::AddConst(c) => Box::new(move |item: u64| {
+                    let item = (item + c as u64) % (2 * 3 * 5 * 7 * 11 * 13 * 17 * 19);
+                    (
+                        item,
+                        if item % m.test_op.divisor as u64 == 0 {
+                            m.test_op.target_true
+                        } else {
+                            m.test_op.target_false
+                        },
+                    )
+                }),
+                Operation::MulConst(c) => Box::new(move |item: u64| {
+                    let item = (item * c as u64) % (2 * 3 * 5 * 7 * 11 * 13 * 17 * 19);
+                    (
+                        item,
+                        if item % m.test_op.divisor as u64 == 0 {
+                            m.test_op.target_true
+                        } else {
+                            m.test_op.target_false
+                        },
+                    )
+                }),
+                Operation::MulOld => Box::new(|item: u64| {
+                    let item = (item * item) % (2 * 3 * 5 * 7 * 11 * 13 * 17 * 19);
+                    (
+                        item,
+                        if item % m.test_op.divisor as u64 == 0 {
+                            m.test_op.target_true
+                        } else {
+                            m.test_op.target_false
+                        },
+                    )
+                }),
+                Operation::AddOld => unreachable!(),
+            };
+            op
+        })
+        .collect::<Vec<_>>();
+
+    items.iter_mut().for_each(|(mi, item)| {
+        let mut cycle_detection: Vec<(usize, u64, i64)> = Vec::with_capacity(100);
+        let mut cc = 10_000;
+        for c in 0..10_000 {
+            let mut cycle = false;
+            loop {
+                let last_mi = *mi;
+
+                let (transformed_item, new_mi) = unsafe { operations.get_unchecked(*mi) }(*item);
+                let id = (
+                    last_mi,
+                    transformed_item % monkeys[*mi].test_op.divisor as u64,
+                    0,
+                );
+
+                if let Some(&cd) = cycle_detection.first() {
+                    if cd.0 == id.0 && cd.1 == id.1 {
+                        cycle = true;
+                    }
+                }
+                cycle_detection.push(id);
+
+                *item = transformed_item;
+                *mi = new_mi;
+
+                *unsafe { counts.get_unchecked_mut(*mi) } += 1;
+
+                if *mi < last_mi {
+                    cycle_detection.last_mut().unwrap().2 = 1;
+                    break;
+                }
+            }
+            if cycle {
+                cc = c;
+                break;
+            }
+        }
+        'outer: loop {
+            for iter in &cycle_detection {
+                counts[iter.0] += 1;
+                cc += iter.2;
+                if cc > 10_001 {
+                    break 'outer;
+                }
+            }
+        }
+    });
+
+    counts.sort_unstable();
+    counts.into_iter().rev().take(2).product::<i64>()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
