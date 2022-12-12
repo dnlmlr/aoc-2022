@@ -40,8 +40,18 @@ struct Monkey {
     items: [u64; 32],
 }
 
-fn parse(dataset: &[u8]) -> Vec<Monkey> {
-    let mut monkeys = Vec::with_capacity(10);
+fn parse(dataset: &[u8]) -> [Monkey; 8] {
+    let mut monkeys = [
+        Monkey::default(),
+        Monkey::default(),
+        Monkey::default(),
+        Monkey::default(),
+        Monkey::default(),
+        Monkey::default(),
+        Monkey::default(),
+        Monkey::default(),
+    ];
+    let mut insert = 0;
 
     let mut i = 0;
     while i < dataset.len() {
@@ -103,7 +113,8 @@ fn parse(dataset: &[u8]) -> Vec<Monkey> {
             inspect_count: 0,
         };
 
-        monkeys.push(monkey);
+        monkeys[insert] = monkey;
+        insert += 1;
     }
     monkeys
 }
@@ -111,11 +122,10 @@ fn parse(dataset: &[u8]) -> Vec<Monkey> {
 #[aoc(day11, part1)]
 pub fn day11_part1(dataset: &[u8]) -> i64 {
     let mut monkeys = parse(dataset);
-    let mut monkey = Monkey::default();
 
     for _ in 0..20 {
-        for m in 0..monkeys.len() {
-            std::mem::swap(unsafe { monkeys.get_unchecked_mut(m) }, &mut monkey);
+        for m in 0..8 {
+            let monkey = unsafe { &mut *monkeys.as_mut_ptr().add(m) };
             while monkey.item_count > 0 {
                 let item = unsafe { *monkey.items.get_unchecked(monkey.item_count as usize - 1) };
                 monkey.item_count -= 1;
@@ -137,7 +147,6 @@ pub fn day11_part1(dataset: &[u8]) -> i64 {
 
                 monkey.inspect_count += 1;
             }
-            std::mem::swap(unsafe { monkeys.get_unchecked_mut(m) }, &mut monkey);
         }
     }
 
@@ -153,11 +162,10 @@ pub fn day11_part1(dataset: &[u8]) -> i64 {
 #[aoc(day11, part2)]
 pub fn day11_part2(dataset: &[u8]) -> i64 {
     let mut monkeys = parse(dataset);
-    let mut monkey = Monkey::default();
 
     for _ in 0..10000 {
         for m in 0..monkeys.len() {
-            std::mem::swap(unsafe { monkeys.get_unchecked_mut(m) }, &mut monkey);
+            let monkey = unsafe { &mut *monkeys.as_mut_ptr().add(m) };
             while monkey.item_count > 0 {
                 let item = unsafe { *monkey.items.get_unchecked(monkey.item_count as usize - 1) };
                 monkey.item_count -= 1;
@@ -168,7 +176,7 @@ pub fn day11_part2(dataset: &[u8]) -> i64 {
                     Operation::MulOld => item * item,
                 };
 
-                let item = item % (2 * 3 * 5 * 7 * 11 * 13 * 15 * 17 * 19);
+                let item = item % (2 * 3 * 5 * 7 * 11 * 13 * 17 * 19);
 
                 let mut target = if item % monkey.test_op.divisor as u64 == 0 {
                     unsafe { monkeys.get_unchecked_mut(monkey.test_op.target_true) }
@@ -181,7 +189,6 @@ pub fn day11_part2(dataset: &[u8]) -> i64 {
 
                 monkey.inspect_count += 1;
             }
-            std::mem::swap(unsafe { monkeys.get_unchecked_mut(m) }, &mut monkey);
         }
     }
 
