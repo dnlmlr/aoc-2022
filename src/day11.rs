@@ -33,23 +33,27 @@ struct TestOp {
 
 #[derive(Debug, Clone, Default)]
 struct Monkey {
-    items: Vec<i32>,
     operation: Operation,
     test_op: TestOp,
     inspect_count: i64,
+    item_count: u8,
+    items: [u64; 32],
 }
 
 fn parse(dataset: &[u8]) -> Vec<Monkey> {
-    let mut monkeys = Vec::new();
+    let mut monkeys = Vec::with_capacity(10);
 
     let mut i = 0;
     while i < dataset.len() {
         i += 28;
-        let mut items = Vec::new();
+
+        let mut items_count = 0;
+        let mut items = [0; 32];
         loop {
             let (num, more_nums) = bstoi2(dataset[i..i + 3].try_into().unwrap());
             i += 4;
-            items.push(num);
+            items[items_count] = num as u64;
+            items_count += 1;
             if !more_nums {
                 break;
             }
@@ -92,6 +96,7 @@ fn parse(dataset: &[u8]) -> Vec<Monkey> {
         };
 
         let monkey = Monkey {
+            item_count: items_count as u8,
             items,
             operation,
             test_op,
@@ -110,22 +115,29 @@ pub fn day11_part1(dataset: &[u8]) -> i64 {
 
     for _ in 0..20 {
         for m in 0..monkeys.len() {
-            std::mem::swap(&mut monkeys[m], &mut monkey);
-            while let Some(item) = monkey.items.pop() {
+            std::mem::swap(unsafe { monkeys.get_unchecked_mut(m) }, &mut monkey);
+            while monkey.item_count > 0 {
+                let item = unsafe { *monkey.items.get_unchecked(monkey.item_count as usize - 1) };
+                monkey.item_count -= 1;
                 let item = match monkey.operation {
-                    Operation::AddConst(c) => item + c,
-                    Operation::MulConst(c) => item * c,
+                    Operation::AddConst(c) => item + c as u64,
+                    Operation::MulConst(c) => item * c as u64,
                     Operation::AddOld => item * 2,
                     Operation::MulOld => item * item,
                 } / 3;
-                if item % monkey.test_op.divisor == 0 {
-                    monkeys[monkey.test_op.target_true].items.push(item);
+
+                let mut target = if item % monkey.test_op.divisor as u64 == 0 {
+                    unsafe { monkeys.get_unchecked_mut(monkey.test_op.target_true) }
                 } else {
-                    monkeys[monkey.test_op.target_false].items.push(item);
-                }
+                    unsafe { monkeys.get_unchecked_mut(monkey.test_op.target_false) }
+                };
+
+                *unsafe { target.items.get_unchecked_mut(target.item_count as usize) } = item;
+                target.item_count += 1;
+
                 monkey.inspect_count += 1;
             }
-            std::mem::swap(&mut monkeys[m], &mut monkey);
+            std::mem::swap(unsafe { monkeys.get_unchecked_mut(m) }, &mut monkey);
         }
     }
 
@@ -138,10 +150,49 @@ pub fn day11_part1(dataset: &[u8]) -> i64 {
         .product::<i64>()
 }
 
-// #[aoc(day11, part2)]
-// pub fn day11_part2(dataset: &[u8]) -> i64 {
-//     0
-// }
+#[aoc(day11, part2)]
+pub fn day11_part2(dataset: &[u8]) -> i64 {
+    let mut monkeys = parse(dataset);
+    let mut monkey = Monkey::default();
+
+    for _ in 0..10000 {
+        for m in 0..monkeys.len() {
+            std::mem::swap(unsafe { monkeys.get_unchecked_mut(m) }, &mut monkey);
+            while monkey.item_count > 0 {
+                let item = unsafe { *monkey.items.get_unchecked(monkey.item_count as usize - 1) };
+                monkey.item_count -= 1;
+                let item = match monkey.operation {
+                    Operation::AddConst(c) => item + c as u64,
+                    Operation::MulConst(c) => item * c as u64,
+                    Operation::AddOld => item * 2,
+                    Operation::MulOld => item * item,
+                };
+
+                let item = item % (2 * 3 * 5 * 7 * 11 * 13 * 15 * 17 * 19);
+
+                let mut target = if item % monkey.test_op.divisor as u64 == 0 {
+                    unsafe { monkeys.get_unchecked_mut(monkey.test_op.target_true) }
+                } else {
+                    unsafe { monkeys.get_unchecked_mut(monkey.test_op.target_false) }
+                };
+
+                *unsafe { target.items.get_unchecked_mut(target.item_count as usize) } = item;
+                target.item_count += 1;
+
+                monkey.inspect_count += 1;
+            }
+            std::mem::swap(unsafe { monkeys.get_unchecked_mut(m) }, &mut monkey);
+        }
+    }
+
+    monkeys.sort_by_key(|m| m.inspect_count);
+    monkeys
+        .into_iter()
+        .rev()
+        .map(|m| m.inspect_count)
+        .take(2)
+        .product::<i64>()
+}
 
 #[cfg(test)]
 mod test {
