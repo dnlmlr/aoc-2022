@@ -1,3 +1,5 @@
+use core::slice::memchr::memchr;
+
 use aoc_runner_derive::aoc;
 
 struct StreamParser<'a> {
@@ -18,17 +20,10 @@ impl<'a> StreamParser<'a> {
         }
     }
 
-    fn identify(ch: u8) -> u8 {
-        if ch.is_ascii_digit() {
-            b'0'
-        } else {
-            ch
-        }
-    }
-
-    fn extract_val(stream: &mut &[u8]) -> u8 {
+    #[inline(always)]
+    fn extract_val(stream: &mut &[u8], is_digit: bool) -> u8 {
         let val;
-        if stream[0].is_ascii_digit() {
+        if is_digit {
             if stream[1].is_ascii_digit() {
                 val = (stream[0] & 0xf) * 10 + (stream[1] & 0xf);
                 *stream = &stream[2..];
@@ -43,45 +38,47 @@ impl<'a> StreamParser<'a> {
         val
     }
 
-    fn extract_val_lhs(&mut self) -> u8 {
-        if Self::identify(self.lhs[0]) != b'0' && self.lhs_extra_brackets > 0 {
+    #[inline(always)]
+    fn extract_val_lhs(&mut self, is_digit: bool) -> u8 {
+        if self.lhs_extra_brackets == 0 || is_digit {
+            Self::extract_val(&mut self.lhs, is_digit)
+        } else {
             self.lhs_extra_brackets -= 1;
             b']'
-        } else {
-            Self::extract_val(&mut self.lhs)
         }
     }
 
-    fn extract_val_rhs(&mut self) -> u8 {
-        if Self::identify(self.rhs[0]) != b'0' && self.rhs_extra_brackets > 0 {
+    #[inline(always)]
+    fn extract_val_rhs(&mut self, is_digit: bool) -> u8 {
+        if self.rhs_extra_brackets == 0 || is_digit {
+            Self::extract_val(&mut self.rhs, is_digit)
+        } else {
             self.rhs_extra_brackets -= 1;
             b']'
-        } else {
-            Self::extract_val(&mut self.rhs)
         }
     }
 
     fn compare(&mut self) -> i8 {
         loop {
-            let type_lhs = Self::identify(self.lhs[0]);
-            let type_rhs = Self::identify(self.rhs[0]);
+            let digit_lhs = self.lhs[0].is_ascii_digit();
+            let digit_rhs = self.rhs[0].is_ascii_digit();
 
-            if type_lhs == b'[' && type_rhs == b'0' {
+            if self.lhs[0] == b'[' && digit_rhs {
                 self.lhs = &self.lhs[1..];
                 self.rhs_extra_brackets += 1;
                 continue;
             }
 
-            if type_lhs == b'0' && type_rhs == b'[' {
+            if digit_lhs && self.rhs[0] == b'[' {
                 self.rhs = &self.rhs[1..];
                 self.lhs_extra_brackets += 1;
                 continue;
             }
 
-            let diff = if type_lhs == b'0' && type_rhs == b'0' {
-                self.extract_val_rhs() as i8 - self.extract_val_lhs() as i8
+            let diff = if digit_lhs && digit_rhs {
+                self.extract_val_rhs(digit_rhs) as i8 - self.extract_val_lhs(digit_lhs) as i8
             } else {
-                self.extract_val_lhs() as i8 - self.extract_val_rhs() as i8
+                self.extract_val_lhs(digit_lhs) as i8 - self.extract_val_rhs(digit_rhs) as i8
             };
 
             if diff != 0 {
@@ -93,12 +90,18 @@ impl<'a> StreamParser<'a> {
 
 #[aoc(day13, part1)]
 pub fn day13_part1(dataset: &[u8]) -> i64 {
-    let mut lines = dataset.split(|&b| b == b'\n');
-
     let mut idx = 0;
     let mut sum = 0;
-    while let (Some(lhs), Some(rhs)) = (lines.next(), lines.next()) {
-        lines.next();
+
+    let mut i = 0;
+    while i < dataset.len() {
+        let Some(lhs_len) = memchr(b'\n', &dataset[i..]) else { break; };
+        let lhs = &dataset[i..i + lhs_len];
+        i += lhs_len + 1;
+
+        let Some(rhs_len) = memchr(b'\n', &dataset[i..]) else { break; };
+        let rhs = &dataset[i..i + rhs_len];
+        i += rhs_len + 2;
 
         idx += 1;
         if StreamParser::new(lhs, rhs).compare() > 0 {
