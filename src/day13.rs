@@ -112,10 +112,38 @@ pub fn day13_part1(dataset: &[u8]) -> i64 {
     sum
 }
 
-// #[aoc(day13, part2)]
-// pub fn day13_part2(_dataset: &[u8]) -> i64 {
-//     todo!()
-// }
+#[aoc(day13, part2)]
+pub fn day13_part2(dataset: &[u8]) -> i64 {
+    let (marker1, mut pos1) = (b"[[2]]", 1);
+    let (marker2, mut pos2) = (b"[[6]]", 2);
+
+    let mut i = 0;
+    while i < dataset.len() {
+        let Some(lhs_len) = memchr(b'\n', &dataset[i..]) else { break; };
+        let lhs = &dataset[i..i + lhs_len];
+        i += lhs_len + 1;
+
+        let Some(rhs_len) = memchr(b'\n', &dataset[i..]) else { break; };
+        let rhs = &dataset[i..i + rhs_len];
+        i += rhs_len + 2;
+
+        if StreamParser::new(lhs, marker2).compare() > 0 {
+            if StreamParser::new(lhs, marker1).compare() > 0 {
+                pos1 += 1;
+            }
+            pos2 += 1;
+        }
+
+        if StreamParser::new(rhs, marker2).compare() > 0 {
+            if StreamParser::new(rhs, marker1).compare() > 0 {
+                pos1 += 1;
+            }
+            pos2 += 1;
+        }
+    }
+
+    pos1 * pos2
+}
 
 #[cfg(test)]
 mod test {
@@ -150,8 +178,8 @@ mod test {
         assert_eq!(13, day13_part1(INPUT));
     }
 
-    // #[test]
-    // fn test_day13_part2() {
-    //     assert_eq!(45000, day13_part2(INPUT));
-    // }
+    #[test]
+    fn test_day13_part2() {
+        assert_eq!(140, day13_part2(INPUT));
+    }
 }
