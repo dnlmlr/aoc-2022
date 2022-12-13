@@ -62,36 +62,31 @@ impl<'a> StreamParser<'a> {
     }
 
     fn compare(&mut self) -> i8 {
-        let type_lhs = Self::identify(self.lhs[0]);
+        loop {
+            let type_lhs = Self::identify(self.lhs[0]);
+            let type_rhs = Self::identify(self.rhs[0]);
 
-        let type_rhs = Self::identify(self.rhs[0]);
+            if type_lhs == b'[' && type_rhs == b'0' {
+                self.lhs = &self.lhs[1..];
+                self.rhs_extra_brackets += 1;
+                continue;
+            }
 
-        if type_lhs == b'[' && type_rhs == b'0' {
-            self.lhs = &self.lhs[1..];
-            self.rhs_extra_brackets += 1;
-            return self.compare();
-        }
+            if type_lhs == b'0' && type_rhs == b'[' {
+                self.rhs = &self.rhs[1..];
+                self.lhs_extra_brackets += 1;
+                continue;
+            }
 
-        if type_lhs == b'0' && type_rhs == b'[' {
-            self.rhs = &self.rhs[1..];
-            self.lhs_extra_brackets += 1;
-            return self.compare();
-        }
+            let diff = if type_lhs == b'0' && type_rhs == b'0' {
+                self.extract_val_rhs() as i8 - self.extract_val_lhs() as i8
+            } else {
+                self.extract_val_lhs() as i8 - self.extract_val_rhs() as i8
+            };
 
-        let diff = match (self.extract_val_lhs(), self.extract_val_rhs()) {
-            (b',', b']') => return 1,
-            (b']', b',') => return -1,
-            (b'[', b']') => return 1,
-            (b']', b'[') => return -1,
-            (b']', _r) if type_rhs == b'0' => -1,
-            (_l, b']') if type_lhs == b'0' => 1,
-            (l, r) => l as i8 - r as i8,
-        };
-
-        if diff == 0 {
-            self.compare()
-        } else {
-            diff
+            if diff != 0 {
+                return diff;
+            }
         }
     }
 }
@@ -106,7 +101,7 @@ pub fn day13_part1(dataset: &[u8]) -> i64 {
         lines.next();
 
         idx += 1;
-        if StreamParser::new(lhs, rhs).compare() < 0 {
+        if StreamParser::new(lhs, rhs).compare() > 0 {
             sum += idx;
         }
     }
