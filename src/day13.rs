@@ -1,90 +1,99 @@
-use std::cmp::Ordering;
-
 use aoc_runner_derive::aoc;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Packet {
-    List(Vec<Packet>),
-    Value(u8),
+struct StreamParser<'a> {
+    lhs: &'a [u8],
+    rhs: &'a [u8],
+
+    lhs_extra_brackets: u8,
+    rhs_extra_brackets: u8,
 }
 
-impl Packet {
-    fn parse_list(data: &[u8]) -> (Self, usize) {
-        let mut packets = Vec::new();
-        let mut i = 0;
-        while data[i] != b']' {
-            let val = match data[i] {
-                b'[' => {
-                    let (val, ii) = Self::parse_list(&data[i + 1..]);
-                    i += ii;
-                    val
-                }
-                mut c => {
-                    c = c & 0xf;
-                    if data[i + 1].is_ascii_digit() {
-                        c = c * 10 + (data[i + 1] & 0xf);
-                        i += 1;
-                    }
-
-                    if data[i + 1] == b',' {
-                        i += 1;
-                    }
-                    Self::Value(c)
-                }
-            };
-            packets.push(val);
-            i += 1;
+impl<'a> StreamParser<'a> {
+    fn new(lhs: &'a [u8], rhs: &'a [u8]) -> Self {
+        Self {
+            lhs,
+            rhs,
+            lhs_extra_brackets: 0,
+            rhs_extra_brackets: 0,
         }
-        i += 1;
-        if data.get(i) == Some(&b',') {
-            i += 1;
-        }
-
-        (Self::List(packets), i)
     }
 
-    fn correct_order(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (Self::Value(lhs), Self::Value(rhs)) => lhs.cmp(rhs),
-            (Self::Value(_), Self::List(_)) => Self::List(vec![self.clone()]).correct_order(other),
-            (Self::List(_), Self::Value(_)) => self.correct_order(&Self::List(vec![other.clone()])),
-            (Self::List(lhs), Self::List(rhs)) => {
-                for i in 0..lhs.len().min(rhs.len()) {
-                    let ord = lhs[i].correct_order(&rhs[i]);
-                    if ord != Ordering::Equal {
-                        return ord;
-                    }
-                }
-                if lhs.len() != rhs.len() {
-                    if lhs.len() < rhs.len() {
-                        return Ordering::Less
-                    } else {
-                        return  Ordering::Greater;
-                    }
-                } else {
-                    Ordering::Equal
-                }
+    fn identify(ch: u8) -> u8 {
+        if ch.is_ascii_digit() {
+            b'0'
+        } else {
+            ch
+        }
+    }
+
+    fn extract_val(stream: &mut &[u8]) -> u8 {
+        let val;
+        if stream[0].is_ascii_digit() {
+            if stream[1].is_ascii_digit() {
+                val = (stream[0] & 0xf) * 10 + (stream[1] & 0xf);
+                *stream = &stream[2..];
+            } else {
+                val = stream[0] & 0xf;
+                *stream = &stream[1..];
             }
+        } else {
+            val = stream[0];
+            *stream = &stream[1..];
+        }
+        val
+    }
+
+    fn extract_val_lhs(&mut self) -> u8 {
+        if Self::identify(self.lhs[0]) != b'0' && self.lhs_extra_brackets > 0 {
+            self.lhs_extra_brackets -= 1;
+            b']'
+        } else {
+            Self::extract_val(&mut self.lhs)
         }
     }
 
-    // fn serialize(&self) -> String {
-    //     match self {
-    //         Packet::List(paks) => {
-    //             let mut s = "[".to_string();
-    //             for i in 0..paks.len() {
-    //                 let p = &paks[i];
-    //                 s.push_str(&p.serialize());
-    //                 if i < paks.len() - 1 {
-    //                     s.push(',');
-    //                 }
-    //             }
-    //             s.push(']');
-    //             s
-    //         }
-    //         Packet::Value(c) => format!("{c}"),
-    //     }
-    // }
+    fn extract_val_rhs(&mut self) -> u8 {
+        if Self::identify(self.rhs[0]) != b'0' && self.rhs_extra_brackets > 0 {
+            self.rhs_extra_brackets -= 1;
+            b']'
+        } else {
+            Self::extract_val(&mut self.rhs)
+        }
+    }
+
+    fn compare(&mut self) -> i8 {
+        let type_lhs = Self::identify(self.lhs[0]);
+
+        let type_rhs = Self::identify(self.rhs[0]);
+
+        if type_lhs == b'[' && type_rhs == b'0' {
+            self.lhs = &self.lhs[1..];
+            self.rhs_extra_brackets += 1;
+            return self.compare();
+        }
+
+        if type_lhs == b'0' && type_rhs == b'[' {
+            self.rhs = &self.rhs[1..];
+            self.lhs_extra_brackets += 1;
+            return self.compare();
+        }
+
+        let diff = match (self.extract_val_lhs(), self.extract_val_rhs()) {
+            (b',', b']') => return 1,
+            (b']', b',') => return -1,
+            (b'[', b']') => return 1,
+            (b']', b'[') => return -1,
+            (b']', _r) if type_rhs == b'0' => -1,
+            (_l, b']') if type_lhs == b'0' => 1,
+            (l, r) => l as i8 - r as i8,
+        };
+
+        if diff == 0 {
+            self.compare()
+        } else {
+            diff
+        }
+    }
 }
 
 #[aoc(day13, part1)]
@@ -96,17 +105,8 @@ pub fn day13_part1(dataset: &[u8]) -> i64 {
     while let (Some(lhs), Some(rhs)) = (lines.next(), lines.next()) {
         lines.next();
 
-        let packet_lhs = Packet::parse_list(&lhs[1..]).0;
-        let packet_rhs = Packet::parse_list(&rhs[1..]).0;
-
-        // let s_lhs = packet_lhs.serialize();
-        // let s_rhs = packet_rhs.serialize();
-
-        // assert_eq!(String::from_utf8_lossy(lhs), s_lhs);
-        // assert_eq!(String::from_utf8_lossy(rhs), s_rhs);
-
         idx += 1;
-        if packet_lhs.correct_order(&packet_rhs) == Ordering::Less {
+        if StreamParser::new(lhs, rhs).compare() < 0 {
             sum += idx;
         }
     }
